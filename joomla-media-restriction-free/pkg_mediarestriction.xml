@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.0" type="package" method="upgrade">
+	<name>Package - miniOrange Media Restriction</name>
+	<packagename>mediarestriction</packagename>
+	<license>GNU General Public License version 3; see LICENSE.txt</license>
+	<version>3.1</version>
+	<author>miniOrange Security Software Pvt. Ltd.</author>
+	<authorEmail>info@xecurify.com</authorEmail>
+	<creationDate>Feb 2023</creationDate>
+	<authorUrl>https://www.miniorange.com/</authorUrl>
+    <copyright>Copyright(C) 2015 miniOrange. All Rights Reserved.</copyright>
+	<description>miniOrange Media Restriction Installed Successfully!</description>
+	<files>
+		<file type="component" id="miniorange_mediarestriction" >com_miniorange_mediarestriction.zip</file>
+		<file type="plugin" id="miniorangeusermediarestriction" group="user">plg_user_miniorangeusermediarestriction.zip</file>
+		<file type="plugin" id="miniorangemediarestriction" group="system">plg_system_miniorangemediarestriction.zip</file>
+	</files>
+	<languages folder="language">
+		<language tag="en-GB">en-GB/en-GB.pkg_miniorangemediarestriction.ini</language>
+		<language tag="en-GB">en-GB/en-GB.pkg_miniorangemediarestriction.sys.ini</language>
+	</languages>	
+	<scriptfile>pkg_script.php</scriptfile>
+	<updateservers>
+		<server type="extension" priority="1" name="MediaRestriction">https://prod-marketing-site.s3.amazonaws.com/plugins/joomla/joomla_media_restriction_update.xml</server>
+	</updateservers>
+</extension>

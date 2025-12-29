@@ -1,0 +1,22 @@
+{
+    "overview" : {
+        "id" : "media_restriction_overview",
+        "href" : "#media_plugin_overview",
+        "text" : "COM_MINIORANGE_MEDIA_PLUGIN_OVERVIEW"
+    },
+    "media_restriction_settings" : {
+        "id" : "media_restriction_access",
+        "href" : "#file_restriction",
+        "text" :"COM_MINIORANGE_MEDIA_PLUGIN_FILE_RESTRICTION"
+    },
+    "media_restriction_advance_settings" : {
+        "id" : "role_based_media_restriction",
+        "href" : "#role_based_file_restriction",
+        "text" :"COM_MINIORANGE_MEDIA_TAB2_SETTINGS"
+    },
+    "media_restriction_upgrade" : {
+        "id" : "upgrade_tab",
+        "href" : "#upgrade_plans",
+        "text" :"COM_MINIORANGE_MEDIA_PLUGIN_UPGRADE"
+    }
+}
