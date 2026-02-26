@@ -23,7 +23,7 @@ class plgSystemMiniorangemediarestrictionInstallerScript
      */
     public function install($parent) 
     {
-        $db  = Factory::getDbo();  
+        $db  = Factory::getDbo(); 
         $vars = array("miniorangemediarestriction","miniorangeusermediarestriction");
 
         foreach ($vars as $key => $value)

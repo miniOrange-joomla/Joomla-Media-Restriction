@@ -111,30 +111,56 @@ class MoMediaRestrictionCustomer
         return self::curl_call($url,$field_string);
     }
 
-    function submit_contact_us($q_email, $q_phone, $query)
+    function submit_contact_us($q_email, $q_phone, $query, $timezone='')
     {
         if (!MoMediaRestrictionUtility::is_curl_installed()) {
-            return json_encode(array("status" => 'CURL_ERROR', 'statusMessage' => '<a href="http://php.net/manual/en/curl.installation.php">PHP cURL extension</a> is not installed or disabled.'));
+            return json_encode([
+                "status" => 'CURL_ERROR',
+                'statusMessage' => '<a href="http://php.net/manual/en/curl.installation.php">PHP cURL extension</a> is not installed or disabled.'
+            ]);
         }
-        $hostname = MoMediaRestrictionUtility::getHostname();
-        $url = $hostname . "/moas/rest/customer/contact-us";
+
+        // Send email similar to UserSync support email
+        $url = 'https://login.xecurify.com/moas/api/notify/send';
+
+        $customer_details = MoMediaRestrictionUtility::getCustomerDetails();
+        $customerKey = !empty($customer_details['customer_key']) ? $customer_details['customer_key'] : $this->defaultCustomerKey;
+
         $current_user = Factory::getUser();
-        $subject = "Query for miniOrange Joomla Media Restriction Free  - " . $q_email;
-        $query = '[Joomla Media Redirection Free]: ' . $query;
-        $fields = array(
-            'firstName' => $current_user->username,
-            'lastName' => '',
-            'company' => $_SERVER['SERVER_NAME'],
-            'email' => $q_email,
-            'ccEmail' => 'joomlasupport@xecurify.com',
-            'phone' => $q_phone,
-            'subject' => $subject,
-            'query' => $query
-        );
+        $adminEmail = isset($current_user->email) ? $current_user->email : '';
+
+        $timezone = trim((string) $timezone);
+        $queryText = '[Joomla Media Restriction Free]: ' . (string) $query;
+
+        $subject = "Query for miniOrange Joomla Media Restriction Free - " . $q_email;
+
+        $content = '<div>Hello, <br><br>'
+            . '<strong>Company</strong> : <a href="' . htmlspecialchars($_SERVER['SERVER_NAME']) . '" target="_blank">' . htmlspecialchars($_SERVER['SERVER_NAME']) . '</a><br><br>'
+            . '<strong>Phone Number</strong> : ' . htmlspecialchars((string) $q_phone) . '<br><br>'
+            . '<strong>Timezone</strong> : ' . htmlspecialchars($timezone) . '<br><br>'
+            . '<strong>Admin Email</strong> : <a href="mailto:' . htmlspecialchars($adminEmail) . '" target="_blank">' . htmlspecialchars($adminEmail) . '</a><br><br>'
+            . '<strong>Email</strong> : <a href="mailto:' . htmlspecialchars((string) $q_email) . '" target="_blank">' . htmlspecialchars((string) $q_email) . '</a><br><br>'
+            . '<strong>Query</strong>: ' . nl2br(htmlspecialchars($queryText)) . '</div>';
+
+        $fields = [
+            'customerKey' => $customerKey,
+            'sendEmail' => true,
+            'email' => [
+                'customerKey' => $customerKey,
+                'fromEmail' => $q_email,
+                'fromName' => 'miniOrange',
+                'toEmail' => 'joomlasupport@xecurify.com',
+                'toName' => 'joomlasupport@xecurify.com',
+                'subject' => $subject,
+                'content' => $content,
+            ],
+        ];
+
         $field_string = json_encode($fields);
 
-        return self::curl_call($url,$field_string);
+        return self::curl_call($url, $field_string);
     }
+
 
     function check_customer($email)
     {
@@ -246,7 +272,8 @@ class MoMediaRestrictionCustomer
         $pluginName='Joomla Media Restriction';
         $saveConfig= $details['save_configuration']==1?'Yes':'No';
         $createdFile= $details['created_file']==1?'Yes':'No';
-        $query1 = '['.$pluginName.' | '.$moPluginVersion.' | PHP ' . $phpVersion.' | OS ' . $os_version.'] ';
+        $timezoneInfo = MoMediaRestrictionUtility::get_timezone_with_utc_offset();
+        $query1 = '['.$pluginName.' | '.$moPluginVersion.' | Joomla ' . $jCmsVersion . ' | PHP ' . $phpVersion.' | OS ' . $os_version.' | Timezone ' . $timezoneInfo . '] ';
         if($query=='Save Configuration')
         {
             $ccEmail='nutan.barad@xecurify.com'; 
@@ -290,13 +317,70 @@ class MoMediaRestrictionCustomer
         return self::curl_call($url,$field_string); 
 
     }
+
+    /**
+     * Uninstall feedback email (shown on uninstall popup) with browser/user/site timezone.
+     */
+    public static function submit_uninstall_feedback_form($email, $phone, $query, $cause, $timezone = '')
+    {
+        $url = 'https://login.xecurify.com/moas/api/notify/send';
+
+        $customerKey = "16555";
+        $apiKey = "fFd2XcvTGDemZvbw1bcUesNJWEqKbbUq";
+        $fromEmail = $email;
+        $phpVersion = phpversion();
+        $dVar = new JConfig();
+        $check_email = $dVar->mailfrom;
+        $jCmsVersion = MoMediaRestrictionUtility::get_joomla_version();
+        $moPluginVersion = MoMediaRestrictionUtility::get_plugin_version();
+        $os_version = MoMediaRestrictionUtility::get_os_info();
+        $pluginName = 'Joomla Media Restriction Free Plugin';
+        $admin_email = !empty($email) ? $email : $check_email;
+
+        $timezone = trim((string) $timezone);
+        $timezoneLine = $timezone !== '' ? ('<strong>Timezone: </strong>' . htmlspecialchars($timezone, ENT_QUOTES, 'UTF-8') . '<br><br>') : '';
+
+        $query1 = '[' . $pluginName . ' | Plugin ' . $moPluginVersion . ' | PHP ' . $phpVersion . ' | Joomla ' . $jCmsVersion . ' | OS ' . $os_version . '] ';
+
+        $ccEmail = 'joomlasupport@xecurify.com';
+        $bccEmail = 'joomlasupport@xecurify.com';
+        $content = '<div>Hello, <br><br>'
+            . '<strong>Company: </strong><a href="' . $_SERVER['SERVER_NAME'] . '" target="_blank">' . $_SERVER['SERVER_NAME'] . '</a><br><br>'
+            . '<strong>Phone Number: </strong>' . $phone . '<br><br>'
+            . $timezoneLine
+            . '<strong>Admin Email: </strong><a href="mailto:' . $admin_email . '" target="_blank">' . $admin_email . '</a><br><br>'
+            . '<strong>Feedback: </strong>' . $query . '<br><br>'
+            . '<strong>Additional Details: </strong>' . $cause . '<br><br>'
+            . '<strong>System Information: </strong>' . $query1
+            . '</div>';
+
+        $subject = "Feedback for miniOrange Joomla Media Restriction Free";
+
+        $fields = array(
+            'customerKey' => $customerKey,
+            'sendEmail' => true,
+            'email' => array(
+                'customerKey' => $customerKey,
+                'fromEmail' => $fromEmail,
+                'bccEmail' => $bccEmail,
+                'fromName' => 'miniOrange',
+                'toEmail' => $ccEmail,
+                'toName' => $bccEmail,
+                'subject' => $subject,
+                'content' => $content
+            ),
+        );
+        $field_string = json_encode($fields);
+
+        return self::curl_call($url, $field_string);
+    }
     
-    function curl_call($url,$field_string)
+    public static function curl_call($url,$field_string)
     {
         $ch = curl_init($url);
         $customer_details = MoMediaRestrictionUtility::getCustomerDetails();
-        $customerKey = !empty($customer_details['customer_key'])?$customer_details['customer_key']:$this->defaultCustomerKey;
-        $apiKey = !empty($customer_details['api_key'])?$customer_details['api_key']:$this->defaultApiKey;
+        $customerKey = !empty($customer_details['customer_key'])?$customer_details['customer_key']:'16555';
+        $apiKey = !empty($customer_details['api_key'])?$customer_details['api_key']:'fFd2XcvTGDemZvbw1bcUesNJWEqKbbUq';
         /* Current time in milliseconds since midnight, January 1, 1970 UTC. */
         $currentTimeInMillis = round(microtime(true) * 1000);
      

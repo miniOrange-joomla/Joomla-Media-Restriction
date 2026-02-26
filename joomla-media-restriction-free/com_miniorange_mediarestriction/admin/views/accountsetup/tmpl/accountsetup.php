@@ -18,6 +18,7 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
 $document = Factory::getApplication()->getDocument();
 $document->addScript(Uri::base() . 'components/com_miniorange_mediarestriction/assets/js/bootstrap.js');
+$document->addScript(Uri::base() . 'components/com_miniorange_mediarestriction/assets/js/countries.js');
 $document->addScript(Uri::base() . 'components/com_miniorange_mediarestriction/assets/js/utility.js');
 $document->addScript('https://cdn.jsdelivr.net/npm/@yaireo/tagify');
 $document->addScript('https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.polyfills.min.js');
@@ -146,7 +147,6 @@ function media_restriction_plugin_overview()
                 <a class="mo_boot_btn mo_media_restrictionbtn mo_boot_px-3 mo_boot_mx-1" target="_blank" href="https://plugins.miniorange.com/media-restriction-in-joomla"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_VISIT_SITE');?></a>
                 <a class="mo_boot_btn mo_media_restrictionbtn mo_boot_px-3 mo_boot_mx-1" href="<?php echo Uri::root().'administrator/index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_upgrade';?>"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_LICENSE_PLANS');?></a>
                 <a class="mo_boot_btn mo_media_restrictionbtn mo_boot_px-3 mo_boot_mx-1" target="_blank" href="https://plugins.miniorange.com/restrict-media-file-folder-access-in-joomla"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_GUIDES');?></a>
-                <a class="mo_boot_btn mo_media_restrictionbtn mo_boot_px-3 mo_boot_mx-1" target="_blank" href="https://faq.miniorange.com/kb/joomla/">FAQ</a>
             </div>
             <div class="mo_boot_col-lg-5 mo_boot_col-sm-12 mo_mediarestriction_img">
                 <img class="img img-fluid" src="<?php echo URI::base();?>/components/com_miniorange_mediarestriction/assets/images/image.png"  alt="Media Restriction Image">   
@@ -444,6 +444,29 @@ function support_form()
                         <div class="mo_boot_col-sm-12">
                             <input  type="email" class="mo-form-control mo_media_restriction_input" name="query_email" value="<?php echo $admin_email; ?>" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_TEXT3');?>" required />
                         </div>
+
+                        <div class="mo_boot_col-sm-12 mo_boot_mt-2">
+                            <div class="mo_boot_row mo-phone-inline-row">
+                                <div class="mo_boot_col-sm-4">
+                                    <div class="mo-phone-card">
+                                        <div class="mo-country-select" id="countrySelect">
+                                            <span class="flag flag-in"></span>
+                                            <span class="dial-code">+91</span>
+                                            <span class="arrow">▾</span>
+                                        </div>
+                                        <ul class="mo-country-list" id="countryList"></ul>
+
+                                        <input type="hidden" name="country_code" id="countryCode" value="91">
+                                        <input type="hidden" name="client_timezone" id="moClientTimezone" value="">
+                                        <input type="hidden" name="client_timezone_offset" id="moClientTimezoneOffset" value="">
+                                    </div>
+                                </div>
+                                <div class="mo_boot_col-sm-8">
+                                    <input type="tel" class="mo-form-control mo_media_restriction_input" name="query_phone" id="query_phone" value="<?php echo $admin_phone; ?>" />
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mo_boot_col-sm-12 mo_boot_mt-2" id="call_date_field" style="display: none;">
                             <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE');?>:<span class="mo_required_field">*</span></h4>
                             <input type="date" class="mo-form-control" id="call_date" name="call_date" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE_PLACEHOLDER');?>"/>

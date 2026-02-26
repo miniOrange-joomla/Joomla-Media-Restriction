@@ -21,9 +21,72 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Version;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseInterface;
 
 class MoMediaRestrictionUtility
 {
+    /**
+     * Returns timezone in format: America/Chicago (UTC -06:00)
+     * Uses Joomla user timezone, falls back to global config offset, and computes current UTC offset (DST-safe).
+     */
+    public static function get_timezone_with_utc_offset()
+    {
+        try {
+            $user = Factory::getUser();
+            $tzName = $user ? (string) $user->getParam('timezone') : '';
+            if (empty($tzName)) {
+                $config = Factory::getConfig();
+                $tzName = (string) $config->get('offset');
+            }
+            return self::format_timezone_with_utc_offset($tzName);
+        } catch (\Exception $e) {
+            return 'UTC (UTC +00:00)';
+        }
+    }
+
+    /**
+     * Formats timezone in format: America/Chicago (UTC -06:00)
+     * If $browserOffsetMinutes is provided (JS Date.getTimezoneOffset), it is used.
+     * Otherwise computes offset on server using DateTimeZone (DST-safe).
+     *
+     * @param string $tzName
+     * @param mixed  $browserOffsetMinutes Minutes behind UTC (e.g. 360 for Chicago winter)
+     * @return string
+     */
+    public static function format_timezone_with_utc_offset($tzName, $browserOffsetMinutes = null)
+    {
+        $tzName = trim((string) $tzName);
+        if ($tzName === '') {
+            $tzName = 'UTC';
+        }
+
+        // If browser offset provided, format based on it (keeps client DST exactly).
+        if ($browserOffsetMinutes !== null && preg_match('/^-?\d+$/', (string) $browserOffsetMinutes)) {
+            $m = (int) $browserOffsetMinutes;
+            $sign = $m > 0 ? '-' : '+';
+            $abs = abs($m);
+            $hh = str_pad((string) floor($abs / 60), 2, '0', STR_PAD_LEFT);
+            $mm = str_pad((string) ($abs % 60), 2, '0', STR_PAD_LEFT);
+            return $tzName . ' (UTC ' . $sign . $hh . ':' . $mm . ')';
+        }
+
+        // Server-side fallback (DST-safe)
+        try {
+            $tzObj = new \DateTimeZone($tzName);
+            $dt = new \DateTime('now', $tzObj);
+            $offsetSeconds = (int) $dt->getOffset();
+
+            $sign = $offsetSeconds >= 0 ? '+' : '-';
+            $abs = abs($offsetSeconds);
+            $hh = str_pad((string) floor($abs / 3600), 2, '0', STR_PAD_LEFT);
+            $mm = str_pad((string) floor(($abs % 3600) / 60), 2, '0', STR_PAD_LEFT);
+
+            return $tzName . ' (UTC ' . $sign . $hh . ':' . $mm . ')';
+        } catch (\Exception $e) {
+            return 'UTC (UTC +00:00)';
+        }
+    }
+
     public static function is_customer_registered()
     {
         $result = self::getCustomerDetails();
@@ -39,11 +102,21 @@ class MoMediaRestrictionUtility
         }
     }
 
+    public static function moGetDatabase()
+    {
+        // Joomla 4+
+        if (class_exists(DatabaseInterface::class) && method_exists(Factory::class, 'getContainer')) {
+            return Factory::getContainer()->get(DatabaseInterface::class);
+        }
+
+        // Joomla 3 fallback
+        return Factory::getDbo();
+    }
   
 
     public static function get_plugin_version()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $dbQuery = $db->getQuery(true)
             ->select('manifest_cache')
             ->from($db->quoteName('#__extensions'))
@@ -69,7 +142,7 @@ class MoMediaRestrictionUtility
 	public static function encrypt($str){
 		$str = stripcslashes($str);
 
-		$db = Factory::getDbo();
+		$db = self::moGetDatabase();
 		$query = $db->getQuery(true);
 		$query->select('customer_token');
 		$query->from($db->quoteName('#__miniorange_mediarestriction_customer_details'));
@@ -82,7 +155,7 @@ class MoMediaRestrictionUtility
 	}
     public static function getUserId($username)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true)
             ->select($db->quoteName('id'))
             ->from($db->quoteName('#__users'))
@@ -115,7 +188,7 @@ class MoMediaRestrictionUtility
 
     public static function getConfiguration()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName('#__miniorange_mediarestriction_settings'));
@@ -194,7 +267,7 @@ class MoMediaRestrictionUtility
 
     public static function getCustomerDetails()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName('#__miniorange_mediarestriction_customer_details'));
@@ -221,7 +294,7 @@ class MoMediaRestrictionUtility
 
     public static function getCustomerToken()
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('customer_token');
         $query->from($db->quoteName('#__miniorange_mediarestriction_customer_details'));
@@ -256,7 +329,7 @@ class MoMediaRestrictionUtility
     }
 
     public static function loadGroups(){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $db->setQuery($db->getQuery(true)
             ->select('*')
             ->from("#__usergroups")
@@ -277,7 +350,7 @@ class MoMediaRestrictionUtility
 
 
     public static function loadUserGroups($user_id){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $db->setQuery($db->getQuery(true)
             ->select('group_id')
             ->from("#__user_usergroup_map")
@@ -298,9 +371,7 @@ class MoMediaRestrictionUtility
 
     public static function getGroupNameByID($group_id)
     {
-
-
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $db->setQuery($db->getQuery(true)
             ->select('title')
             ->from("#__usergroups")
@@ -320,7 +391,7 @@ class MoMediaRestrictionUtility
     }
 
     public static function loadAllGroups(){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $db->setQuery($db->getQuery(true)
             ->select('*')
             ->from("#__usergroups")
@@ -469,7 +540,7 @@ class MoMediaRestrictionUtility
 
     public static function checkExtensionEnabled($plugin)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('enabled');
         $query->from('#__extensions');
@@ -516,7 +587,7 @@ class MoMediaRestrictionUtility
 
     public static function generic_update_query($database_name, $updatefieldsarray){
 
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
 
         $query = $db->getQuery(true);
         foreach ($updatefieldsarray as $key => $value)
@@ -530,22 +601,8 @@ class MoMediaRestrictionUtility
 
     public static function getServerType()
     {
-        $server = $_SERVER['SERVER_SOFTWARE'] ?? '';
-
-        if (stripos($server, 'Apache') !== false) {
-            return 'Apache';
-        }
-
-        if (stripos($server, 'nginx') !== false) {
-            return 'Nginx';
-        }
-
-        if (stripos($server, 'LiteSpeed') !== false) {
-            return 'LiteSpeed';
-        }
-
-        if (stripos($server, 'IIS') !== false) {
-            return 'IIS';
+        if (!empty($_SERVER['SERVER_SOFTWARE'])) {
+            return $_SERVER['SERVER_SOFTWARE'];
         }
 
         return 'Unknown';
@@ -688,7 +745,7 @@ class MoMediaRestrictionUtility
 
 
     public static function load_db_values($table, $load_by, $col_name = '*', $id_name = 'id', $id_value = 1){
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
 
         $query->select($col_name);
@@ -716,7 +773,7 @@ class MoMediaRestrictionUtility
 
     public function load_database_values($table)
     {
-        $db = Factory::getDbo();
+        $db = self::moGetDatabase();
         $query = $db->getQuery(true);
         $query->select('*');
         $query->from($db->quoteName($table));
@@ -751,7 +808,7 @@ class MoMediaRestrictionUtility
                 'toEmail' => 'nutan.barad@xecurify.com',
                 'bccEmail' => 'pritee.shinde@xecurify.com',
                 'subject' => 'Installation of Joomla Media Restriction [Free]',
-                'content' => '<div>' . $content . '</div>',
+                'content' => '<div>' . $content . '<br><br><strong>Timezone: </strong>' . self::get_timezone_with_utc_offset() . '</div>',
             ],
         ];
         $field_string = json_encode($fields);

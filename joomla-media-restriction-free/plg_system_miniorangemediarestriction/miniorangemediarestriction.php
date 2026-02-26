@@ -46,10 +46,27 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
     
                 $dVar=new JConfig();
                 $check_email = $dVar->mailfrom;
-                $admin_email = !empty($details ['admin_email']) ? $details ['admin_email'] :$check_email;
+                $admin_email = !empty($customerResult ['admin_email']) ? $customerResult ['admin_email'] : $check_email;
                 $admin_email = !empty($admin_email)?$admin_email:self::getSuperUser();
                 $admin_phone = $customerResult['admin_phone'];
                 $data1 = $radio . ' : ' . $data . '  <br><br><strong>Email:</strong>  ' . $feedback_email;
+
+                // Timezone (browser -> user -> site)
+                $client_timezone = isset($post['client_timezone']) ? (string) $post['client_timezone'] : '';
+                $client_timezone_offset = null;
+                if (isset($post['client_timezone_offset']) && preg_match('/^-?\d+$/', (string) $post['client_timezone_offset'])) {
+                    $client_timezone_offset = (int) $post['client_timezone_offset'];
+                }
+                $user = Factory::getUser();
+                $config = Factory::getConfig();
+                $tzName = trim((string) $client_timezone);
+                if ($tzName === '') {
+                    $tzName = (string) $user->getParam('timezone');
+                }
+                if (trim((string) $tzName) === '') {
+                    $tzName = (string) $config->get('offset');
+                }
+                $timezone = trim((string) MoMediaRestrictionUtility::format_timezone_with_utc_offset($tzName, $client_timezone_offset));
          
                 if(isset($post['mojspfree_skip_feedback']))
                 {
@@ -59,8 +76,7 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
                 if(file_exists(JPATH_BASE . DIRECTORY_SEPARATOR . 'components' . DIRECTORY_SEPARATOR . 'com_miniorange_mediarestriction' . DIRECTORY_SEPARATOR . 'helpers' . DIRECTORY_SEPARATOR . 'mo_customer_setup.php'))
                 {
                     require_once JPATH_BASE . DIRECTORY_SEPARATOR . 'components' . DIRECTORY_SEPARATOR . 'com_miniorange_mediarestriction' . DIRECTORY_SEPARATOR . 'helpers' . DIRECTORY_SEPARATOR . 'mo_customer_setup.php';
-                    $customer = new MoMediaRestrictionCustomer();
-                    $customer->submit_feedback_form($admin_email, $admin_phone, $data1);
+                    MoMediaRestrictionCustomer::submit_uninstall_feedback_form($admin_email, $admin_phone, $data1, '', $timezone);
                 }
               
                 require_once JPATH_SITE . DIRECTORY_SEPARATOR . 'libraries' . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Installer' . DIRECTORY_SEPARATOR . 'Installer.php';
@@ -96,7 +112,7 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
                             if (!$installer) {
                                 $installer = new Installer();
                                 if (method_exists($installer, 'setDatabase')) {
-                                    $installer->setDatabase(Factory::getDbo());
+                                    $installer->setDatabase(MoMediaRestrictionUtility::moGetDatabase());
                                 }
                             }
                             
@@ -134,7 +150,7 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
 
     public static function getSuperUser()
     {
-        $db = Factory::getDBO();
+        $db = MoMediaRestrictionUtility::moGetDatabase();
         $query = $db->getQuery(true)->select('user_id')->from('#__user_usergroup_map')->where('group_id=' . $db->quote(8));
         $db->setQuery($query);
         $results = $db->loadColumn();
@@ -206,7 +222,7 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
         $app = Factory::getApplication();
         $input = method_exists($app, 'getInput') ? $app->getInput() : $app->input;
         $post = ($input && $input->post) ? $input->post->getArray() : [];
-        $tables = Factory::getDbo()->getTableList();
+        $tables = MoMediaRestrictionUtility::moGetDatabase()->getTableList();
         $result = MoMediaRestrictionUtility::load_db_values('#__extensions', 'loadColumn', 'extension_id', 'element', 'com_miniorange_mediarestriction');
         $tab = 0;
         foreach ($tables as $table) {
@@ -229,11 +245,28 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
                         if ($results == $id) {?>
                             <link rel="stylesheet" type="text/css" href="<?php echo URI::base();?>/components/com_miniorange_mediarestriction/assets/css/miniorange_mediarestriction.css" />
                             <link rel="stylesheet" type="text/css" href="<?php echo URI::base();?>/components/com_miniorange_mediarestriction/assets/css/miniorange_boot.css" />
-                            <div class="form-style-6 mo_boot_offset-4 mo_boot_col-4 mo_boot_mt-2">
-                                <h1>Feedback form for Joomla Media Restriction Plugin</h1>
+                            <div class="form-style-6 mo_boot_offset-4 mo_boot_col-4 mo_boot_mt-2 mo_boot_p-4">
+                                <form name="f" method="post" action="" id="mojspfree_feedback_form_close">
+                                    <h1 class="mo_feedback_heading">
+                                        Feedback form for Joomla Media Restriction Plugin
+
+                                        <span class="mo_close_icon" onclick="skipMediaRestrictionForm()" aria-label="Close">
+                                            &times;
+                                        </span>
+
+                                        <input type="hidden" name="mojspfree_skip_feedback" value="mojspfree_skip_feedback"/>
+                                    </h1>
+                                    <?php
+                                        foreach ($tpostData['cid'] as $key) { ?>
+                                            <input type="hidden" name="result[]" value=<?php echo $key ?>>
+                                        <?php }
+                                    ?>
+                                </form>
                                 <form name="f" method="post" action="" id="mojsp_feedback" class="mo_boot_p-3">
                                     <h3>What Happened? </h3>
                                     <input type="hidden" name="mojsp_media_feedback" value="mojsp_media_feedback"/>
+                                    <input type="hidden" name="client_timezone" id="mo_client_timezone" value="" />
+                                    <input type="hidden" name="client_timezone_offset" id="mo_client_timezone_offset" value="" />
                                     <div>
                                         <p class="mo_boot_ml-3">
                                             <?php
@@ -274,19 +307,19 @@ class plgSystemMiniorangemediarestriction extends CMSPlugin
                                         </div>
                                     </div>
                                 </form>
-                                <form name="f" method="post" action="" id="mojspfree_feedback_form_close">
-                                    <input type="hidden" name="mojspfree_skip_feedback" value="mojspfree_skip_feedback"/>
-                                    <div class="mo_boot_text-center mo_boot_p-3">
-                                        <button class="mo_boot_btn mo_media_restrictionbtn mo_boot_col-12 mo_boot_p-2" onClick="skipMediaRestrictionForm()">Skip Feedback</button>
-                                    </div>
-                                    <?php
-                                        foreach ($tpostData['cid'] as $key) { ?>
-                                            <input type="hidden" name="result[]" value=<?php echo $key ?>>
-                                        <?php }
-                                    ?>
                             </div>
                             <script src="https://code.jquery.com/jquery-3.6.3.js"></script>
                             <script>
+                                (function(){
+                                    try {
+                                        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                                        var off = (new Date()).getTimezoneOffset();
+                                        var tzEl = document.getElementById('mo_client_timezone');
+                                        var offEl = document.getElementById('mo_client_timezone_offset');
+                                        if (tzEl) tzEl.value = tz;
+                                        if (offEl) offEl.value = String(off);
+                                    } catch (e) {}
+                                })();
                                 jQuery('input:radio[name="deactivate_plugin"]').click(function () {
                                     var reason = jQuery(this).val();
                                     jQuery('#query_feedback').removeAttr('required')

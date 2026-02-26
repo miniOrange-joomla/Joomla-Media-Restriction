@@ -14,6 +14,7 @@ use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\MVC\Controller\FormController;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
+include_once JPATH_SITE . DIRECTORY_SEPARATOR . 'administrator' . DIRECTORY_SEPARATOR . 'components' . DIRECTORY_SEPARATOR . 'com_miniorange_mediarestriction' . DIRECTORY_SEPARATOR . 'helpers' . DIRECTORY_SEPARATOR . 'mo_mediarestriction_utility.php';
 
 class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
 {
@@ -40,6 +41,9 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
         $support_type = isset($post['support_type']) ? $post['support_type'] : 'general_query';
         $call_date = isset($post['call_date']) ? $post['call_date'] : '';
         $call_time = isset($post['call_time']) ? $post['call_time'] : '';
+        $country_code = isset($post['country_code']) ? $post['country_code'] : '';
+        $client_timezone = isset($post['client_timezone']) ? $post['client_timezone'] : '';
+        $client_timezone_offset = isset($post['client_timezone_offset']) ? $post['client_timezone_offset'] : '';
 
         if (MoMediaRestrictionUtility::check_empty_or_null($query_email) || MoMediaRestrictionUtility::check_empty_or_null($query)) {
             $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=overview',  Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_SUBMIT_EMAIL'), 'error');
@@ -65,20 +69,70 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
                 $query .= "\nFull DateTime: " . $formatted_datetime;
             }
 
+            $dial = preg_replace('/\D+/', '', (string) $country_code);
+            $phone_raw = trim((string) $phone);
+
+            if (!empty($dial) && $phone_raw !== '' && strpos($phone_raw, '+') !== 0) {
+                $local = preg_replace('/\D+/', '', $phone_raw);
+                $phone = '+' . $dial . ($local !== '' ? (' ' . $local) : '');
+            } elseif (!empty($dial) && $phone_raw === '') {
+                $phone = '+' . $dial;
+            }
+
+            // Timezone details (priority: browser tz -> Joomla user tz -> global config offset)
+            $user = Factory::getUser();
+            $config = Factory::getConfig();
+
+            $tzName = trim((string) $client_timezone);
+            if ($tzName === '') {
+                $tzName = (string) $user->getParam('timezone');
+            }
+            if (trim((string) $tzName) === '') {
+                $tzName = (string) $config->get('offset');
+            }
+
+            $timezone = MoMediaRestrictionUtility::format_timezone_with_utc_offset($tzName, $client_timezone_offset);
+
             $contact_us = new MoMediaRestrictionCustomer();
-            $submited = $contact_us->submit_contact_us($query_email, $phone, $query);
-       
-            if (json_last_error() == JSON_ERROR_NONE) {
-                if (is_array($submited) && array_key_exists('status', $submited) && $submited['status'] == 'ERROR') {
-                    $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=account', $submited['message'], 'error');
-                } else {
-                    if ($submited != 'Query submitted.') {
-                        $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=overview', Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_QUERY_SUBMIT'), 'error');
+            $response = $contact_us->submit_contact_us($query_email, $phone, $query, $timezone);
+
+            // Handle both JSON and plain-string responses from the contact-us API
+            $submited = json_decode($response, true);
+            $isJson = (json_last_error() == JSON_ERROR_NONE);
+
+            $isSuccess = false;
+            $errorMessage = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_QUERY_SUBMIT');
+
+            if ($isJson) {
+                if (is_string($submited)) {
+                    $isSuccess = (stripos($submited, 'submitted') !== false);
+                } elseif (is_array($submited)) {
+                    $status = isset($submited['status']) ? strtoupper((string) $submited['status']) : '';
+                    $message = isset($submited['message']) ? (string) $submited['message'] : (isset($submited['statusMessage']) ? (string) $submited['statusMessage'] : '');
+                    if ($status === 'ERROR') {
+                        $errorMessage = $message !== '' ? $message : $errorMessage;
+                        $isSuccess = false;
                     } else {
-                        $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=overview', Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_THANK_MSG'));
+                        $isSuccess = ($status === 'SUCCESS') || (stripos($message, 'submitted') !== false);
+                        if (!$isSuccess && $message !== '') {
+                            $errorMessage = $message;
+                        }
                     }
                 }
+            } else {
+                // Plain text fallback
+                $isSuccess = is_string($response) && (stripos($response, 'submitted') !== false);
+                if (!$isSuccess && is_string($response) && trim($response) !== '') {
+                    $errorMessage = trim($response);
+                }
             }
+
+            if ($isSuccess) {
+                $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=support', Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_THANK_MSG'));
+            } else {
+                $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=support', $errorMessage, 'error');
+            }
+            return;
         }
     }
 
@@ -111,7 +165,7 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
         }
 
         //update
-        $db = Factory::getDbo();
+        $db = MoMediaRestrictionUtility::moGetDatabase();
         $query = $db->getQuery(true);
         $fields = array(
             $db->quoteName('enable_media_restriction') . ' = ' . $db->quote($enable_media_restriction),

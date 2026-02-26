@@ -7,7 +7,7 @@
 	<authorUrl>https://www.miniorange.com/</authorUrl>
 	<creationDate>Feb 2023</creationDate>
 	<copyright>Copyright(C) 2015 miniOrange. All Rights Reserved.</copyright>
-	<version>3.1</version>
+	<version>3.2</version>
 	<description>PLG_SYSTEM_MINIORANGEMEDIARESTRICTION_XML_DESCRIPTION</description>
 	<scriptfile>myscript.php</scriptfile>
 	<files>
