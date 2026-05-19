@@ -132,7 +132,7 @@ class MoMediaRestrictionCustomer
         $timezone = trim((string) $timezone);
         $queryText = '[Joomla Media Restriction Free]: ' . (string) $query;
 
-        $subject = "Query for miniOrange Joomla Media Restriction Free - " . $q_email;
+        $subject = "Query for Joomla Media Restriction Free - " . $q_email;
 
         $content = '<div>Hello, <br><br>'
             . '<strong>Company</strong> : <a href="' . htmlspecialchars($_SERVER['SERVER_NAME']) . '" target="_blank">' . htmlspecialchars($_SERVER['SERVER_NAME']) . '</a><br><br>'
@@ -294,7 +294,7 @@ class MoMediaRestrictionCustomer
             $ccEmail='joomlasupport@xecurify.com';
             $bccEmail='joomlasupport@xecurify.com';
             $content = '<div >Hello, <br><br><strong>Company :<a href="' . $_SERVER['SERVER_NAME'] . '" target="_blank" ></strong>' . $_SERVER['SERVER_NAME'] . '</a><br><br><strong>Phone Number :</strong>' . $phone . '<br><br><strong>Admin Email :<a href="mailto:' . $admin_email . '" target="_blank"></strong>' . $admin_email . '</a><br><br><strong>Plugin Deactivated: </strong>' . $query1 . '<br><br><strong>Reason: </strong>' . $cause . '<br><br> <strong>Save Configuration: </strong>' . $saveConfig . '<br><br><strong>Created .htaccess file: </strong>' . $createdFile . '<br><br></div>';   
-            $subject = "Feedback for miniOrange Joomla Media Restriction Free";
+            $subject = "Joomla Media Restriction Free Feedback";
         }
        
 
@@ -354,7 +354,7 @@ class MoMediaRestrictionCustomer
             . '<strong>System Information: </strong>' . $query1
             . '</div>';
 
-        $subject = "Feedback for miniOrange Joomla Media Restriction Free";
+        $subject = "Joomla Media Restriction Free Feedback";
 
         $fields = array(
             'customerKey' => $customerKey,

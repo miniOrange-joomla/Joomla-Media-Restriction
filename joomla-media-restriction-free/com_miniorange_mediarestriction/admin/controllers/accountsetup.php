@@ -39,8 +39,9 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
         $query = isset($post['query_support']) ? $post['query_support'] : '';
         $phone = isset($post['query_phone']) ? $post['query_phone'] : '';
         $support_type = isset($post['support_type']) ? $post['support_type'] : 'general_query';
-        $call_date = isset($post['call_date']) ? $post['call_date'] : '';
-        $call_time = isset($post['call_time']) ? $post['call_time'] : '';
+        $call_date     = isset($post['call_date'])     ? $post['call_date']     : '';
+        $call_time     = isset($post['call_time'])     ? $post['call_time']     : '';
+        $call_timezone = isset($post['call_timezone']) ? trim($post['call_timezone']) : '';
         $country_code = isset($post['country_code']) ? $post['country_code'] : '';
         $client_timezone = isset($post['client_timezone']) ? $post['client_timezone'] : '';
         $client_timezone_offset = isset($post['client_timezone_offset']) ? $post['client_timezone_offset'] : '';
@@ -62,11 +63,11 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
             }
 
             if ($support_type == 'setup_call') {
-                // Combine date and time for display
-                $datetime_string = $call_date . ' ' . $call_time;
+                $datetime_string    = $call_date . ' ' . $call_time;
                 $formatted_datetime = date('F j, Y \a\t g:i A', strtotime($datetime_string));
-                $query .= "\n\n--- Support Call Reuest Details ---";
-                $query .= "\nFull DateTime: " . $formatted_datetime;
+                $query .= "\n\n--- Support Call Request Details ---";
+                $query .= "\nDate & Time: " . $formatted_datetime;
+                $query .= "\nTimezone: " . $call_timezone . ' (' . $timezone . ')';
             }
 
             $dial = preg_replace('/\D+/', '', (string) $country_code);
@@ -79,19 +80,19 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
                 $phone = '+' . $dial;
             }
 
-            // Timezone details (priority: browser tz -> Joomla user tz -> global config offset)
-            $user = Factory::getUser();
-            $config = Factory::getConfig();
+        // Timezone details (priority: user-selected call tz -> browser tz -> Joomla user tz -> global config offset)
+        $user = Factory::getUser();
+        $config = Factory::getConfig();
 
-            $tzName = trim((string) $client_timezone);
-            if ($tzName === '') {
-                $tzName = (string) $user->getParam('timezone');
-            }
-            if (trim((string) $tzName) === '') {
-                $tzName = (string) $config->get('offset');
-            }
+        $tzName = $call_timezone !== '' ? $call_timezone : trim((string) $client_timezone);
+        if ($tzName === '') {
+            $tzName = (string) $user->getParam('timezone');
+        }
+        if (trim((string) $tzName) === '') {
+            $tzName = (string) $config->get('offset');
+        }
 
-            $timezone = MoMediaRestrictionUtility::format_timezone_with_utc_offset($tzName, $client_timezone_offset);
+        $timezone = MoMediaRestrictionUtility::format_timezone_with_utc_offset($tzName, $client_timezone_offset);
 
             $contact_us = new MoMediaRestrictionCustomer();
             $response = $contact_us->submit_contact_us($query_email, $phone, $query, $timezone);
@@ -164,6 +165,15 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
           }   
         }
 
+        if (empty(trim($mo_file_types, ','))) {
+            $this->setRedirect(
+                'index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings',
+                Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_FILE_TYPES_REQUIRED'),
+                'error'
+            );
+            return;
+        }
+
         //update
         $db = MoMediaRestrictionUtility::moGetDatabase();
         $query = $db->getQuery(true);
@@ -189,74 +199,75 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
         $customer = new MoMediaRestrictionCustomer();
         $customer->submit_feedback_form('','Save Configuration','Successfully saved configuration.');
 
-        $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_CONFIGURATION_SUCCESSFUL');
-        $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message,'success');
+        $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_SAVED_SHOW_RULES_HTACCESS');
+        $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings&show_rules=1', $message,'success');
     }
 
 
     function writeHtaccess()
     {
-        $customer_details = MoMediaRestrictionUtility::getCustomerDetails();
-       
-        $home_path=JPATH_ROOT;
-        $htaccess_file = $home_path.'\.htaccess';
-        $insertion = MoMediaRestrictionUtility::getRules();
-        if(file_exists($htaccess_file) && is_writable($home_path) && is_writeable($htaccess_file)){
-            $htaccess_file_backup = $home_path.'\.miniorange-htaccess-backup';
-            copy($htaccess_file, $home_path.'\.miniorange-htaccess-backup');
-            MoMediaRestrictionUtility::insertRules($htaccess_file,$insertion);
-            $database_name = '#__miniorange_mediarestriction_customer_details';
-            $updatefieldsarray = array(
-                'created_file' => 1,
-            );
+        $home_path    = JPATH_ROOT;
+        $htaccess_file = $home_path . '/.htaccess';
+        $backup_file   = $home_path . '/.miniorange-htaccess-backup';
+        $insertion     = MoMediaRestrictionUtility::getRules();
+
+        if (file_exists($htaccess_file) && is_writable($home_path) && is_writable($htaccess_file)) {
+            copy($htaccess_file, $backup_file);
+            $result = MoMediaRestrictionUtility::insertRules($htaccess_file, $insertion);
+
+            if ($result === false) {
+                $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_ACCESS_FILE');
+                $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message, 'error');
+                return;
+            }
+
+            $database_name    = '#__miniorange_mediarestriction_customer_details';
+            $updatefieldsarray = array('created_file' => 1);
             MoMediaRestrictionUtility::generic_update_query($database_name, $updatefieldsarray);
             $customer = new MoMediaRestrictionCustomer();
-            $customer->submit_feedback_form('', 'Create File','File updated correctly');
+            $customer->submit_feedback_form('', 'Create File', 'File updated correctly');
             $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_HTACCESS_FILE');
             $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message);
-        }else{
-            if(is_writable($home_path)){
-               
-                if(file_exists($htaccess_file))
-                    copy($htaccess_file, $home_path.'\.miniorange-htaccess-backup');
-                else{
+        } else {
+            if (is_writable($home_path)) {
+                if (file_exists($htaccess_file)) {
+                    copy($htaccess_file, $backup_file);
+                } else {
                     MoMediaRestrictionUtility::show_popup();
                 }
-                    
-            }else
-            {
-                $database_name = '#__miniorange_mediarestriction_customer_details';
-                $updatefieldsarray = array(
-                    'created_file' => 1,
-                );
+            } else {
+                $database_name    = '#__miniorange_mediarestriction_customer_details';
+                $updatefieldsarray = array('created_file' => 1);
                 MoMediaRestrictionUtility::generic_update_query($database_name, $updatefieldsarray);
                 $customer = new MoMediaRestrictionCustomer();
-                $customer->submit_feedback_form('','Create File','Do not have access to file.');
+                $customer->submit_feedback_form('', 'Create File', 'Do not have access to file.');
                 $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_ACCESS_FILE');
                 $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message, 'error');
             }
         }
-       
     }
 
     function createHtaccess()
     {
-        $home_path = JPATH_ROOT;
-        $htaccess_file = $home_path . '/.htaccess';
+        $home_path         = JPATH_ROOT;
+        $htaccess_file     = $home_path . '/.htaccess';
         $htaccess_txt_file = $home_path . '/htaccess.txt';
+        $backup_file       = $home_path . '/.miniorange-htaccess-backup';
 
-        $insertion = MoMediaRestrictionUtility::getRules();
+        $insertion    = MoMediaRestrictionUtility::getRules();
         $start_marker = '# BEGIN MINIORANGE MEDIA RESTRICTION';
-        $end_marker = '# END MINIORANGE MEDIA RESTRICTION';
+        $end_marker   = '# END MINIORANGE MEDIA RESTRICTION';
 
         if (!file_exists($htaccess_txt_file)) {
-            echo "htaccess.txt file not found.";
+            $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_ACCESS_FILE');
+            $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message, 'error');
             return;
         }
 
-        $fp = fopen($htaccess_txt_file, 'r+');
+        $fp = fopen($htaccess_txt_file, 'r');
         if ($fp === false) {
-            echo "Failed to open htaccess.txt for reading.";
+            $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_ACCESS_FILE');
+            $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message, 'error');
             return;
         }
 
@@ -264,23 +275,32 @@ class MiniorangeMediaRestrictionControllerAccountsetup extends FormController
         while (!feof($fp)) {
             $lines[] = rtrim(fgets($fp), "\r\n");
         }
-        $insertion_rule=implode("\n", 
-        array_merge(
-        array( $start_marker ),
-        $insertion,
-        array( $end_marker ),
-        $lines
+        fclose($fp);
+
+        $insertion_rule = implode("\n", array_merge(
+            array($start_marker),
+            $insertion,
+            array($end_marker),
+            $lines
         ));
-        if (class_exists(File::class)) {
+
+        if (class_exists('Joomla\CMS\Filesystem\File')) {
             $result = File::write($htaccess_file, $insertion_rule);
-        } elseif (class_exists(\Joomla\Filesystem\File::class)) {
+        } elseif (class_exists('Joomla\Filesystem\File')) {
             $result = \Joomla\Filesystem\File::write($htaccess_file, $insertion_rule);
         } else {
-            File::write($htaccess_file, $insertion_rule);
+            $result = (file_put_contents($htaccess_file, $insertion_rule) !== false);
         }
-        copy($htaccess_txt_file, $home_path.'\.miniorange-htaccess-backup');
+
+        if (!$result) {
+            $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_ACCESS_FILE');
+            $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message, 'error');
+            return;
+        }
+
+        copy($htaccess_txt_file, $backup_file);
         $customer = new MoMediaRestrictionCustomer();
-        $customer->submit_feedback_form('', 'Create File','File created successfully');
+        $customer->submit_feedback_form('', 'Create File', 'File created successfully');
         $message = Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_FILE_CREATED');
         $this->setRedirect('index.php?option=com_miniorange_mediarestriction&view=accountsetup&tab-panel=media_restriction_settings', $message);
     }

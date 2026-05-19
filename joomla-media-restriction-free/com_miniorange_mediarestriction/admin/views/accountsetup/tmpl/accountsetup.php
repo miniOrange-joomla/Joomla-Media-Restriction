@@ -168,7 +168,8 @@ function file_restriction()
                 <div class="mo_boot_col-sm-12 mo_boot_mt-3">
                     <div class="mo_boot_row">
                         <div class="mo_boot_col-lg-8 mo_boot_col-sm-7 mo_boot_mt-1">
-                            <h3><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_FILE_RESTRICTION');?></h3>
+                            <h3><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_FILE_RESTRICTION');?><a href="https://plugins.miniorange.com/restrict-media-file-folder-access-in-joomla#step2" target="_blank" class="mo_mediarestriction_setup_guide_button">
+                                <i class="fa-regular fa-rectangle-list"></i></a></h3>
                         </div>
                         <div class="mo_boot_col-lg-4 mo_boot_col-sm-4 mo_boot_mt-1">
                             <button  class= "mo_boot_btn mo_boot_mt-1 mo_media_restrictionbtn mo_boot_p-2 mo_disable_option show_rules mo_media_restriction_btn"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_SHOW_RULES');?></button>
@@ -194,11 +195,12 @@ function file_restriction()
                         <div class="mo_boot_col-sm-12 mo_boot_mt-3">
                             <div class="mo_boot_row">
                                 <div class="mo_boot_col-sm-5">
-                                    <strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_OPTION1');?></strong><br>
+                                    <strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_OPTION1');?> <span class="mo_required_field" title="Required">*</span></strong><br>
                                     <p class="mo_media_restriction_option"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_OPTION1_T1');?><strong> <?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_OPTION1_T2');?></strong></p>
                                 </div>
                                 <div class="mo_boot_col-sm-7">
                                     <input class="mo-form-control mo_media_restriction_textarea" name="mo_media_restriction_file_types" value="<?php echo  $mo_media_restriction_file_types; ?>" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_OPTION1_T3');?>">
+                                    <span id="mo_file_types_error" class="mo_mediarestriction_error_span"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_CON_FILE_TYPES_REQUIRED');?></span>
                                 </div>
                             </div>
                         </div>
@@ -254,17 +256,25 @@ function file_restriction()
                         </div>
                     </div>
                     <div class="mo_boot_col-sm-12">
-                        <div class="mo_boot_row mo_boot_mt-5">
+                        <div class="mo_boot_row mo_boot_my-5">
                             <div class="mo_boot_col-sm-12 mo_boot_text-center">
-                                <input type="submit" name="role_based_access" value="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_SAVE_SETTINGS');?>" class= "mo_boot_btn mo_media_restrictionbtn  mo_boot_p-2 mo_boot_mt-1"/>
+                                <input type="submit" name="role_based_access" value="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_SAVE_SETTINGS');?>" class="mo_boot_btn mo_media_restrictionbtn mo_boot_p-2 mo_boot_mt-1"/>
                             </div>
                         </div>
                     </div>
-                    <p class="mo_media_restriction_note mo_boot_mt-2"><strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_NOTE');?></strong>&nbsp;<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_NOTE2');?>&nbsp;<strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_SHOW_RULES');?></strong>&nbsp;<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_NOTE3');?> </p>
                 </form>
             </div>
             <?php echo show_htaccess_rules(); ?>
     </div>
+    <script>
+    jQuery(document).ready(function() {
+        // After saving settings, auto-show the rules panel if redirected with show_rules=1
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('show_rules') === '1') {
+            jQuery('.show_rules').trigger('click');
+        }
+    });
+    </script>
     <?php
 }
 
@@ -279,10 +289,11 @@ function show_htaccess_rules()
             <div class="rules mo_media_restriction_rules">
                 <div class="mo_boot_row">
                     <div class="mo_boot_col-sm-8 mo_boot_mt-3">
-                        <h3><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_HTACCESS_RULE');?></h3>
+                        <h3><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_HTACCESS_RULE');?><a href="https://plugins.miniorange.com/restrict-media-file-folder-access-in-joomla#step2" target="_blank" class="mo_mediarestriction_setup_guide_button">
+                                <i class="fa-regular fa-rectangle-list"></i></a></h3>
                     </div>
                     <div class="mo_boot_col-sm-4">
-                        <button class= "mo_boot_btn mo_boot_mt-1 mo_media_restrictionbtn mo_boot_p-2 hide_rules mo_media_restriction_btn"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_CONFIGURATION');?></button>
+                        <button class="mo_boot_btn mo_boot_mt-1 mo_media_restrictionbtn mo_boot_p-2 hide_rules mo_media_restriction_btn"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_CONFIGURATION');?></button>
                     </div>
                 </div>
                 <hr>
@@ -415,13 +426,13 @@ function support_form()
                     <div class="mo_boot_col-12 mo_boot_mb-3">
                         <div class="mo_boot_row mo_boot_mt-2">
                             <div class="mo_boot_col-6 mo_boot_px-2">
-                                <input type="radio" id="support_general" name="support_type" value="general_query" checked onclick="toggleCallTimeField()" style="display: none;">
+                                <input type="radio" id="support_general" name="support_type" value="general_query" checked onclick="toggleCallTimeField()" class="mo_mediarestriction_display_none">
                                 <label for="support_general" class="support-type-btn" id="general_query_btn">
                                     <strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_GENERAL_QUERY');?></strong>
                                 </label>
                             </div>
                             <div class="mo_boot_col-6 mo_boot_px-2">
-                                <input type="radio" id="support_call" name="support_type" value="setup_call" onclick="toggleCallTimeField()" style="display: none;">
+                                <input type="radio" id="support_call" name="support_type" value="setup_call" onclick="toggleCallTimeField()" class="mo_mediarestriction_display_none">
                                 <label for="support_call" class="support-type-btn" id="setup_call_btn">
                                     <strong><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_SETUP_CALL');?></strong>
                                 </label>
@@ -467,14 +478,26 @@ function support_form()
                             </div>
                         </div>
 
-                        <div class="mo_boot_col-sm-12 mo_boot_mt-2" id="call_date_field" style="display: none;">
-                            <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE');?>:<span class="mo_required_field">*</span></h4>
-                            <input type="date" class="mo-form-control" id="call_date" name="call_date" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE_PLACEHOLDER');?>"/>
+                        <div class="mo_boot_col-sm-12 mo_boot_mt-2">
+                            <div class="mo_boot_row">
+                                <div class="mo_boot_col-sm-6">
+                                    <div class="mo_boot_col-sm-12 mo_boot_mt-2 mo_mediarestriction_display_none" id="call_date_field">
+                                        <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE');?>:<span class="mo_required_field">*</span></h4>
+                                        <input type="date" class="mo-form-control" id="call_date" name="call_date" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_DATE_PLACEHOLDER');?>"/>
+                                    </div>
+                                </div>
+                                <div class="mo_boot_col-sm-6">
+                                    <div class="mo_boot_col-sm-12 mo_boot_mt-2 mo_mediarestriction_display_none" id="call_time_field">
+                                        <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_TIME');?>:<span class="mo_required_field">*</span></h4>
+                                        <input type="time" class="mo-form-control" id="call_time" name="call_time" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_TIME_PLACEHOLDER');?>"/>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="mo_boot_col-sm-12 mo_boot_mt-2" id="call_time_field" style="display: none;">
-                            <h4 class="mo_boot_mb-1"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_TIME');?>:<span class="mo_required_field">*</span></h4>
-                            <input type="time" class="mo-form-control" id="call_time" name="call_time" placeholder="<?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_TIME_PLACEHOLDER');?>"/>
+                    
+                        <div class="mo_boot_col-sm-12 mo_boot_mt-2 mo_mediarestriction_display_none" id="call_timezone_field">
+                            <h4 class="mo_boot_mb-1">Timezone:<span class="mo_required_field">*</span></h4>
+                            <input type="text" class="mo-form-control" id="call_timezone" name="call_timezone" placeholder="e.g. Asia/Kolkata, America/New_York" required/>
                         </div>
 
                         <div class="mo_boot_col-sm-12"><br>
@@ -514,9 +537,8 @@ function media_restriction_licensing_plans()
                         <ul class="cd-pricing-wrapper">
                             <li id="singlesite_tab" data-type="singlesite" class="mosslp is-visible cd-singlesite">
                                 <header class="cd-pricing-header">
-                                    <h2 class="mo_boot_mb-3"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_FREE');?><br/></h2>
+                                    <h2><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_FREE');?></h2>
                                 </header>
-                                <br>
                                 <div class=" mo_mediarestriction_text_center">
                                     <span id="plus_total_price" class="mo_mediarestriction_pricing">$0</span>
                                 </div>
@@ -552,9 +574,8 @@ function media_restriction_licensing_plans()
                         <ul class="cd-pricing-wrapper">
                             <li id="singlesite_tab" data-type="singlesite" class="mosslp is-visible">
                                 <header class="cd-pricing-header">
-                                    <h2 class="mo_boot_mb-3"><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_PRE_VERSION');?><br/></h2>
-                                </header>              
-                                <br>
+                                    <h2><?php echo Text::_('COM_MINIORANGE_MEDIARESTRICTION_PLUGIN_PRE_VERSION');?></h2>
+                                </header>
                                 <div class="mo_mediarestriction_text_center">
                                     <span id="plus_total_price" class="mo_mediarestriction_pricing">$149</span>
                                 </div>

@@ -7,7 +7,7 @@
 	<authorUrl>https://www.miniorange.com/</authorUrl>
 	<creationDate>Feb 2023</creationDate>
 	<copyright>Copyright(C) 2015 miniOrange. All Rights Reserved.</copyright>
-	<version>3.2</version>
+	<version>3.5</version>
     <description>PLG_USER_MEDIARESTRICTION_XML_DESCRIPTION</description>
     <files>
         <filename plugin="miniorangeusermediarestriction">miniorangeusermediarestriction.php</filename>

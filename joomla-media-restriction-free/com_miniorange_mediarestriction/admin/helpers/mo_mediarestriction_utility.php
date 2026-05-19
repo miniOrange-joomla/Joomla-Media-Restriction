@@ -433,13 +433,17 @@ class MoMediaRestrictionUtility
             $htacces_file_types='';
         }
         
+        if (empty($htacces_file_types)) {
+            return array();
+        }
+
         $insertion='';
-        $insertion.=' RewriteCond %{REQUEST_FILENAME} ^.*('.$htacces_file_types .')$ +';
-        $insertion.='RewriteCond %{REQUEST_URI} images +';    
-        $insertion.=' RewriteCond %{HTTP_COOKIE} !^.*mo_user_logged_in.*$ [NC] +';
+        $insertion.='RewriteEngine On +';
+        $insertion.='RewriteCond %{REQUEST_FILENAME} ^.*('.$htacces_file_types .')$ +';
+        $insertion.='RewriteCond %{REQUEST_URI} images +';
+        $insertion.='RewriteCond %{HTTP_COOKIE} !^.*mo_user_logged_in.*$ [NC] +';
         $insertion.='RewriteRule . - [R=403,L]';
-    
-        
+
         $insertion = explode("+", $insertion);
         return $insertion;
 
@@ -459,13 +463,18 @@ class MoMediaRestrictionUtility
 	    $end_marker   = "# END {$marker}";
 
         $fp = fopen( $htaccess_file, 'r+' );
+        if ( $fp === false ) {
+            return false;
+        }
+        flock( $fp, LOCK_EX );
+
         $lines = array();
 
         while ( ! feof( $fp ) ) {
             $lines[] = rtrim( fgets( $fp ), "\r\n" );
         }
 
-        	// Split out the existing file into the preceding lines, and those that appear after the marker.
+        // Split out the existing file into the preceding lines, and those that appear after the marker.
         $pre_lines        = array();
         $post_lines       = array();
         $existing_lines   = array();
@@ -498,15 +507,14 @@ class MoMediaRestrictionUtility
             return true;
         }
 
-        // Generate the new file data.
+        // Generate the new file data: preserve pre_lines first, then the plugin block, then post_lines.
         $new_file_data = implode(
             "\n",
             array_merge(
-               
+                $pre_lines,
                 array( $start_marker ),
                 $insertion,
                 array( $end_marker ),
-                $pre_lines,
                 $post_lines
             )
         );

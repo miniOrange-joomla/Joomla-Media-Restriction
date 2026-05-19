@@ -66,6 +66,17 @@ jQuery(document).ready(function() {
 
     jQuery('.tagify').css("width", "100%");
 
+    jQuery('form[name="f"]').on('submit', function(e) {
+        var tags = tagify1 ? tagify1.value : [];
+        if (!tags || tags.length === 0) {
+            e.preventDefault();
+            jQuery('#mo_file_types_error').show();
+            jQuery('input[name="mo_media_restriction_file_types"]').closest('.mo_boot_col-sm-7').find('.tagify').css('border-color', 'red');
+            return false;
+        }
+        jQuery('#mo_file_types_error').hide();
+        jQuery('input[name="mo_media_restriction_file_types"]').closest('.mo_boot_col-sm-7').find('.tagify').css('border-color', '');
+    });
 
     jQuery('.show_rules').click(function(){
         jQuery('.rules').show();
@@ -147,27 +158,41 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function toggleCallTimeField() {
-    var callDateField = document.getElementById('call_date_field');
-    var callTimeField = document.getElementById('call_time_field');
-    var callDateInput = document.getElementById('call_date');
-    var callTimeInput = document.getElementById('call_time');
-    var setupCallRadio = document.getElementById('support_call');
-    
-    // Update button visual states
+    var callDateField     = document.getElementById('call_date_field');
+    var callTimeField     = document.getElementById('call_time_field');
+    var callTimezoneField = document.getElementById('call_timezone_field');
+    var callDateInput     = document.getElementById('call_date');
+    var callTimeInput     = document.getElementById('call_time');
+    var callTimezoneInput = document.getElementById('call_timezone');
+    var setupCallRadio    = document.getElementById('support_call');
+
     updateButtonStates();
-    
+
     if (setupCallRadio.checked) {
-        callDateField.style.display = 'block';
-        callTimeField.style.display = 'block';
+        callDateField.style.display     = 'block';
+        callTimeField.style.display     = 'block';
+        callTimezoneField.style.display = 'block';
         callDateInput.setAttribute('required', 'required');
         callTimeInput.setAttribute('required', 'required');
+        callTimezoneInput.setAttribute('required', 'required');
+
+        // Auto-fill browser timezone if empty
+        if (!callTimezoneInput.value) {
+            try {
+                var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (browserTz) callTimezoneInput.value = browserTz;
+            } catch (e) {}
+        }
     } else {
-        callDateField.style.display = 'none';
-        callTimeField.style.display = 'none';
+        callDateField.style.display     = 'none';
+        callTimeField.style.display     = 'none';
+        callTimezoneField.style.display = 'none';
         callDateInput.removeAttribute('required');
         callTimeInput.removeAttribute('required');
-        callDateInput.value = '';
-        callTimeInput.value = '';
+        callTimezoneInput.removeAttribute('required');
+        callDateInput.value     = '';
+        callTimeInput.value     = '';
+        callTimezoneInput.value = '';
     }
 }
 

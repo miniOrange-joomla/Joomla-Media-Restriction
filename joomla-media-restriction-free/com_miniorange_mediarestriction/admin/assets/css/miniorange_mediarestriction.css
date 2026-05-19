@@ -667,6 +667,23 @@ CSS for pop up
     background: #f5f7fa;
 }
 
+.mo_mediarestriction_setup_guide_button{
+    display: inline-block;
+    border-radius: 4px;
+    margin-left: 3px;
+    color: #000;
+}
+
+.mo_mediarestriction_display_none{
+    display: none;
+}
+
+.mo_mediarestriction_error_span{
+    color:red;
+    font-size:0.875em;
+    display:none;
+}
+
 :root[data-color-scheme=dark] {
     .mo_mediarestriction_navbar{
         background-color: #0f151d;
@@ -827,6 +844,10 @@ CSS for pop up
 
     .mo-country-list li:hover {
         background: #0f151d;
+    }
+
+    .mo_mediarestriction_setup_guide_button{
+        color: #fff;
     }
 }
 
